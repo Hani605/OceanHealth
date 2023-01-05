@@ -5,6 +5,7 @@ DROP TABLE IF EXISTS subgoal;
 DROP TABLE IF EXISTS region;
 DROP TABLE IF EXISTS goal;
 
+/*Target tables created*/
 CREATE TABLE goal (
 goal_id VARCHAR(6), 
 goal_description VARCHAR(50),
@@ -31,9 +32,11 @@ PRIMARY KEY (year, goal_id, dimension, region_id),
 FOREIGN KEY (goal_id) REFERENCES goal (goal_id),
 FOREIGN KEY (region_id) REFERENCES region (region_id));
 
+/*Restrict possible values in dimension field*/
 ALTER TABLE ocean_health
 ADD CHECK (dimension IN ("future", "pressures", "resilience", "score", "status", "trend"));
 
+/*Cleaning*/
 UPDATE ocean_health_src
 SET value = NULL
 WHERE value = "NA";
@@ -57,25 +60,21 @@ INSERT INTO ocean_health (year, goal_id, dimension, region_id, value)
 SELECT *
 FROM ocean_health_src;
 
-/* Q3 */
+/*All information about Egypt's Coastal Protection*/
 SELECT *
 FROM ocean_health 
 JOIN region ON region.region_id = ocean_health.region_id
 WHERE region.region_name = "Egypt" AND ocean_health.goal_id = (SELECT goal_id FROM goal WHERE goal_description = "Coastal Protection") AND YEAR = 2021
 ORDER BY dimension;
-/* The future dimension is calculated by the pressures, resilience, and trend values, as per the data dictionary. 
-The 2021 future dimension is lower than the current status because the pressures and resilience for this region are all relatively low, in comparison to the current status.
-This provides reasoning for why the future is lower than the status. 
-In addition, the trend is negative, which shows there is an estimated decrease in status for the future, also contributing to the future having a lower score than the current. */
 
-/* Q4 */
+/*Listing unique year and value for years with highest or lowest value of the score dimension and of the index goal.*/
 SELECT *
 FROM ocean_health
 WHERE (value = (SELECT min(value) FROM ocean_health WHERE dimension = "score" AND goal_id = "Index") AND dimension = "score")
 OR (value = (SELECT max(value) FROM ocean_health WHERE dimension = "score" AND goal_id = "Index") AND dimension = "score")
 ORDER BY year ASC, value desc;
 
-/*Q5*/
+/*South American countries not in study (those with no coastlines)*/
 DROP TABLE IF EXISTS south_america;
 
 CREATE table south_america(
@@ -89,14 +88,14 @@ FROM south_america
 WHERE country NOT IN (SELECT region_name FROM region WHERE region_name IN ('Argentina', 'Bolivia', 'Brazil', 'Chile', 'Colombia',  'Ecuador', 'Guyana', 'Paraguay', 'Peru', 'Suriname', 'Uruguay', 'Venezuela'))
 ORDER BY country asc;
 
-/*Q6*/
+/*List of highest Biodivesity value for each year*/
 SELECT *
 FROM ocean_health
 NATURAL JOIN goal
 NATURAL JOIN region
 WHERE goal_id = 'BD' AND dimension = 'score' AND value IN (SELECT max(value) FROM ocean_health NATURAL JOIN goal NATURAL JOIN region WHERE goal_id = 'BD' AND dimension = 'score' GROUP BY year);
 
-/* Q7 */
+/*Tuples with current (2021) status value either >90 or<10 with 'fish' in description to see regions best for fishing*/
 DROP TABLE IF EXISTS fish;
 
  CREATE temporary table fish AS
@@ -115,19 +114,19 @@ DROP TABLE IF EXISTS fish;
  WHERE fishing_status IS NOT NULL
  ORDER BY value desc, region_id asc;
 
-/* Q8 */
+/*List of goals that are not subgoals*/
 SELECT goal.goal_id, goal_description
 FROM goal
 LEFT JOIN subgoal ON goal.goal_id = subgoal.subgoal_id
 WHERE subgoal_id IS NULL;
 
-/* Q9 */
+/*Listing of each subgoal with their top-level goals*/
 SELECT goal_id, goal_description, CONCAT(subgoal_id, ' ', goal_description) AS subgoal_description
 FROM goal
 NATURAL JOIN subgoal
 ORDER BY goal_description, subgoal_description;
 
-/* Q10 */
+/*Pivoting part of table (for India's measurements)*/
 
 DROP TABLE IF EXISTS india_measurement;
 
